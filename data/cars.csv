@@ -1,3 +1,3 @@
-year,make,model,trim,top_speed,accel_0_60,accel_0_100,accel_0_186,qmile_time,qmile_speed,weight,downforce_kg,downforce_speed,horsepower,torque,layout,drivetrain
-2016,Dodge,Viper,ACR-E,177,3.3,,,11.3,127.3,1538,771,177,645,600,fm,r
-2010,Bugatti,Veyron,Supersport,267,2.4,,,9.9,146,1990,400,250,1183,1106,m,a
+year,make,model,trim,top_speed,accel_0_60,accel_0_100,accel_0_186,qmile_time,qmile_speed,mass,downforce_kg,downforce_speed,horsepower,torque,layout
+2016,Dodge,Viper,ACR-E,177,3.3,7.4,,11.3,127.3,1538,771,177,645,600,fr
+2010,Bugatti,Veyron,Supersport,267,2.4,4.9,14.6,9.9,146,1990,400,250,1183,1106,ma
