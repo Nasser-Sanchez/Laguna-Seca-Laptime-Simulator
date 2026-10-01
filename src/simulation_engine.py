@@ -17,8 +17,11 @@ class SimulationEngine:
         self.g = 9.81
         self.mu = 1
 
-    def _cornering_calculator(self,row):
-        
+    def _cornering_calculator(self):
+
+        is_corner = self.track['type']=="corner"
+        corners = self.track[is_corner]
+
         multiplier = self.driver.get_multiplier()[0]
         self.car.downforce_curve['d2'] = self.car.downforce_curve['downforce']*multiplier
         
@@ -34,8 +37,21 @@ class SimulationEngine:
         )
 
 
-            # return np.sqrt(
-            #     (mu * ((g*mass)+downforce)*r) / mass
-            # )
+        cornering_speeds = np.interp(
+            corners['radius'],
+            self.car.downforce_curve['req_radius'],
+            self.car.downforce_curve['velocity']
+        )
+
+
+        result = self.track.copy()
+        result['cornering_speed'] = np.nan
+        result.loc[is_corner, 'cornering_speed'] = cornering_speeds
+        
+        return result
+
+       
+        
+
 
 
