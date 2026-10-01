@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-from scipy.optimize import curve_fit
 from scipy.stats import beta
 import json
 from pathlib import Path
@@ -35,4 +34,4 @@ class DriverProfile:
         cornering = beta.rvs(self.a1, self.b1)
         straight = beta.rvs(self.a2, self.a2)
 
-        return 2-cornering, 2-straight
+        return [2-cornering, 2-straight]
