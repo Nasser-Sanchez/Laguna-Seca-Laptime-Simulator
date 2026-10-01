@@ -13,6 +13,7 @@ class CarModel:
         self.model_type = 'log'
         self.curve_params = {}
         self.downforce_curve = self.compute_downforce_curve()
+        self.acceleration_curve = self.compute_acceleration_curve()
 
     @staticmethod
     def _mph_to_mps(v_mph: float):
