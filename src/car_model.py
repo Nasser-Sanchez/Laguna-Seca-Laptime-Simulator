@@ -80,7 +80,7 @@ class CarModel:
 
         # time range for v / t curve 
         max_t = 180
-        t_dense = np.linspace(0, max_t, 1800)
+        t_dense = np.linspace(0, max_t, 18000)
 
         v_dense = a * np.log(b * t_dense + 1)
 
@@ -106,7 +106,7 @@ class CarModel:
 
         v_grid = np.linspace(0,
                              self._mph_to_mps(self.specs['top_speed']),
-                             200
+                             2000
                              )
         F_d = d_f * (v_grid / d_v)**2
         return pd.DataFrame({'velocity':v_grid, 'downforce':F_d})
