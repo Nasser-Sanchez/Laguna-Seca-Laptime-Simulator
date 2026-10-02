@@ -12,17 +12,15 @@ class SimulationEngine:
     def __init__(self, car:CarModel, driver:DriverProfile):
         self.car = car
         self.driver = driver
-        self.track_path = "data/laguna_seca_mappings.csv"
+        self.track_path = "data/laguna_seca_mapping.csv"
         self.track = pd.read_csv(self.track_path)
         self.g = 9.81
         self.mu = 1
 
     def _calculate_corner(self,row):
 
-
-
         multiplier = self.driver.get_multiplier()[0]
-        self.car.downforce_curve['d2'] = self.car.downforce_curve['downforce']*multiplier
+        self.car.downforce_curve['scaled_downforce'] = self.car.downforce_curve['downforce']*multiplier
         
         def _cornering_radius(m, g, mu, v, downforce):
             return np.sqrt(
@@ -32,7 +30,7 @@ class SimulationEngine:
         self.car.downforce_curve['req_radius'] = _cornering_radius(
             self.car.specs['mass'], self.g, self.mu, 
             self.car.downforce_curve['velocity'],
-            self.car.downforce_curve['d2']
+            self.car.downforce_curve['scaled_downforce']
         )
 
 
@@ -44,13 +42,71 @@ class SimulationEngine:
 
 
         row['cornering_speed'] = cornering_speed
-        row['cornering_time'] = row['arc_length']/row['cornering_speed']
+        row['max_speed'] = cornering_speed
+        row['time'] = row['arc_length']/row['cornering_speed']
         
         return row
 
-    def _calculate_straight(self,row):
+    def _calculate_straight(self, row):
+        
+        multiplier = self.driver.get_multiplier()[1]
+        self.car.acceleration_curve['scaled_time'] = self.car.acceleration_curve['time'] * multiplier
+
+    #    entry_time = np.interp(
+    #        entry_speed,
+    #        self.car.acceleration_curve['velocity'],
+    #        self.car.acceleration_curve['scaled_time']
+    #    )
+        entry_curve = self.car.acceleration_curve[self.car.acceleration_curve['velocity']>=row['entry_speed']].copy()
+        start_time = entry_curve['scaled_time'].min()
+        entry_curve['lag_velocity'] = entry_curve['velocity'].shift(1)
+        entry_curve['lag_time'] = entry_curve['scaled_time'].shift(1)
+
+        entry_curve['auc'] = (
+            ((entry_curve['velocity'] + entry_curve['lag_velocity']) / 2) *
+            (entry_curve['scaled_time'] - entry_curve['lag_time'])
+        )
+
+        entry_curve['cumauc'] = entry_curve['auc'].fillna(0).cumsum()
+
+        straight_segment = entry_curve[entry_curve['cumauc']>=row['distance_straight']].iloc[0].copy()
+        row['time'] = straight_segment['scaled_time'] - start_time
+        row['max_speed'] = straight_segment['velocity']
+
+        return row
+
+
+    def simulate_lap(self, flying_start: str = "y"):
+
+        self.track['cornering_speed'] = 0.0
+        self.track['time'] = 0.0
+        self.track['entry_speed'] = 0.0
+        self.track['max_speed'] = 0.0
+        track = self.track.copy()
+        if flying_start!="y":
+            track = track[track['timed']==True].copy()
+
+        
+        for i,row in track.iterrows():
+            current_pos = track.index.get_loc(i)
+            if row['type']=="corner":
+                row = self._calculate_corner(row)
+            else:
+                row = self._calculate_straight(row)
+            if current_pos<len(track)-1:
+                next_idx = track.index[current_pos + 1]
+                track.loc[next_idx,'entry_speed'] = row['max_speed']
+            track.loc[i] = row
+        return track
+
         
 
+
+       
+              
+
+
+        
 
     
 
