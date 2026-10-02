@@ -21,17 +21,18 @@ class SimulationEngine:
 
         multiplier = self.driver.get_multiplier()[0]
         self.car.downforce_curve['scaled_downforce'] = self.car.downforce_curve['downforce']*multiplier
-        
+
         def _cornering_radius(m, g, mu, v, downforce):
-            return np.sqrt(
+            return (
                 ((v**2) * m) / 
                 (mu * ((g * m) + downforce))
-            )
+            )            
         self.car.downforce_curve['req_radius'] = _cornering_radius(
             self.car.specs['mass'], self.g, self.mu, 
             self.car.downforce_curve['velocity'],
             self.car.downforce_curve['scaled_downforce']
         )
+
 
 
         cornering_speed = np.interp(
@@ -42,7 +43,7 @@ class SimulationEngine:
 
 
         row['cornering_speed'] = cornering_speed
-        row['max_speed'] = cornering_speed
+        row['final_velocity'] = cornering_speed
         row['time'] = row['arc_length']/row['cornering_speed']
         
         return row
@@ -53,11 +54,11 @@ class SimulationEngine:
         self.car.acceleration_curve['scaled_time'] = self.car.acceleration_curve['time'] * multiplier
 
     #    entry_time = np.interp(
-    #        entry_speed,
+    #        initial_velocity,
     #        self.car.acceleration_curve['velocity'],
     #        self.car.acceleration_curve['scaled_time']
     #    )
-        entry_curve = self.car.acceleration_curve[self.car.acceleration_curve['velocity']>=row['entry_speed']].copy()
+        entry_curve = self.car.acceleration_curve[self.car.acceleration_curve['velocity']>=row['initial_velocity']].copy()
         start_time = entry_curve['scaled_time'].min()
         entry_curve['lag_velocity'] = entry_curve['velocity'].shift(1)
         entry_curve['lag_time'] = entry_curve['scaled_time'].shift(1)
@@ -71,7 +72,7 @@ class SimulationEngine:
 
         straight_segment = entry_curve[entry_curve['cumauc']>=row['distance_straight']].iloc[0].copy()
         row['time'] = straight_segment['scaled_time'] - start_time
-        row['max_speed'] = straight_segment['velocity']
+        row['final_velocity'] = straight_segment['velocity']
 
         return row
 
@@ -80,23 +81,27 @@ class SimulationEngine:
 
         self.track['cornering_speed'] = 0.0
         self.track['time'] = 0.0
-        self.track['entry_speed'] = 0.0
-        self.track['max_speed'] = 0.0
+        self.track['initial_velocity'] = 0.0
+        self.track['final_velocity'] = 0.0
         track = self.track.copy()
-        if flying_start!="y":
+        if flying_start=="n":
             track = track[track['timed']==True].copy()
 
         
         for i,row in track.iterrows():
             current_pos = track.index.get_loc(i)
+            if current_pos>0:
+                row['initial_velocity'] = track.loc[track.index[current_pos-1],'final_velocity']
             if row['type']=="corner":
                 row = self._calculate_corner(row)
             else:
                 row = self._calculate_straight(row)
-            if current_pos<len(track)-1:
-                next_idx = track.index[current_pos + 1]
-                track.loc[next_idx,'entry_speed'] = row['max_speed']
+            # if current_pos<len(track)-1:
+            #     next_idx = track.index[current_pos + 1]
+            #     track.loc[next_idx,'initial_velocity'] = row['final_velocity']
             track.loc[i] = row
+        track['initial_velocity'] = track['initial_velocity'] * 2.237
+        track['final_velocity'] = track['final_velocity'] * 2.237
         return track
 
         
