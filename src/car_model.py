@@ -45,15 +45,15 @@ class CarModel:
         return t_data, v_data
 
     def _fit_log(self):
-        def log_curve(t,a,b):
+        def _log_curve(t,a,b):
             return a*np.log(b*t+1)
         popt,pcov = curve_fit(
-              log_curve, 
+              _log_curve, 
               self.t_data, 
               self.v_data,
               p0=[1,1]
         )
-        y_pred = log_curve(self.t_data, *popt)
+        y_pred = _log_curve(self.t_data, *popt)
         rss = np.sum((self.v_data-y_pred)**2)
         return popt, rss
         
@@ -93,6 +93,12 @@ class CarModel:
 
         return pd.DataFrame({'time': t_final, 'velocity': v_final})
 
+    # def _log_function(self, multiplier):
+    #     popt, rss = self._fit_log()
+    #     a = popt[0]
+    #     b = popt[1]
+    #     return (2-multiplier)*(a*np.log(b*t+1))
+        
     def compute_downforce_curve(self):
 
         d_f = self.specs['downforce_kg'] * 9.81
