@@ -23,7 +23,7 @@ class DriverProfile:
         return{
             SkillLevel.NOVICE: (25, 50, 50, 55),
             SkillLevel.PRO: (100, 1, 10000, 2),
-            SkillLevel.MAX: ()
+            SkillLevel.MAX: (1,1,1,1)
         }[self.skill_level]
 
     def get_multiplier(self):
@@ -34,4 +34,4 @@ class DriverProfile:
         cornering = beta.rvs(self.a1, self.b1)
         straight = beta.rvs(self.a2, self.a2)
 
-        return [2-cornering, 2-straight]
+        return [cornering, 2-straight]
