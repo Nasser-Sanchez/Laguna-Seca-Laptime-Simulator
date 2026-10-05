@@ -21,8 +21,8 @@ class DriverProfile:
     def _get_params(self):
 
         return{
-            SkillLevel.NOVICE: (25, 50, 50, 55),
-            SkillLevel.PRO: (100, 1, 10000, 2),
+            SkillLevel.NOVICE: (2, 4, 3, 3),
+            SkillLevel.PRO: (2, 0.5, 10000, 2),
             SkillLevel.MAX: (1,1,1,1)
         }[self.skill_level]
 
@@ -34,4 +34,5 @@ class DriverProfile:
         cornering = beta.rvs(self.a1, self.b1)
         straight = beta.rvs(self.a2, self.a2)
 
+        #print(f"Multipliers: {cornering} , {2-straight}")
         return [cornering, 2-straight]
