@@ -51,7 +51,8 @@ class CarModel:
               _log_curve, 
               self.t_data, 
               self.v_data,
-              p0=[1,1]
+              p0=[1,1],
+              bounds=(0, np.inf)
         )
         y_pred = _log_curve(self.t_data, *popt)
         rss = np.sum((self.v_data-y_pred)**2)
@@ -66,7 +67,8 @@ class CarModel:
               exp_curve,
               self.t_data,
               self.v_data,
-              p0=[1]
+              p0=[1],
+              bounds=(0, np.inf)
         )
         y_pred = exp_curve(self.t_data,popt[0])
         rss = np.sum((self.v_data-y_pred)**2)
