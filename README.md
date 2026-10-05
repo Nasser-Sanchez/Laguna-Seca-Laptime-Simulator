@@ -15,16 +15,6 @@ It will evolve into a **scalable, automated engineering project**:
 - **Scalable Architecture:** Designed to handle 10,000+ simulations per car using distributed computing.
 - **Generalisation:** Supports adding new cars and tracks via LLM agent or web scraping.
 
-## Tech Stack
-
-| Layer | Technology | Purpose |
-| :--- | :--- | :--- |
-| **Environment** | **Pixi** | Dependency management  |
-| **Data Pipeline** | **DuckDB** | Fast, local SQL-based cleaning and staging |
-| **Transformation** | **dbt** | Standardising car specs and track segments |
-| **Simulation** | **PySpark** | Distributed Monte Carlo processing |
-| **Analysis** | **Python** (NumPy, Pandas) | Curve fitting and statistical analysis |
-| **Deployment** | **FastAPI** | API for web application and visualisation |
 
 
 ## Planned Project Structure
