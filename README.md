@@ -7,10 +7,6 @@ A basic car performance simulation engine designed to compare vehicles on the La
 This project began as a **manual analysis** comparing specific vehicle performance (e.g., Dodge Viper ACR-E vs. Bugatti Veyron Supersport) using static CSV data and Excel-based calculations.
 
 It will evolve into a **scalable, automated engineering project**:
-1.  **Ingestion:** Raw car specs and track geometry are loaded via a data pipeline.
-2.  **Transformation:** Data is cleaned and standardised using **DuckDB** and **dbt**.
-3.  **Simulation:** The core physics engine runs distributed Monte Carlo simulations using **Apache Spark**.
-4.  **Deployment:** Results are served via a **FastAPI** web application with real-time visualisation.
 
 ## Features
 
@@ -23,7 +19,7 @@ It will evolve into a **scalable, automated engineering project**:
 
 | Layer | Technology | Purpose |
 | :--- | :--- | :--- |
-| **Environment** | **Pixi** | Dependency management (Python 3.11, Java, Spark) |
+| **Environment** | **Pixi** | Dependency management  |
 | **Data Pipeline** | **DuckDB** | Fast, local SQL-based cleaning and staging |
 | **Transformation** | **dbt** | Standardising car specs and track segments |
 | **Simulation** | **PySpark** | Distributed Monte Carlo processing |
@@ -35,11 +31,6 @@ It will evolve into a **scalable, automated engineering project**:
 
 - **`data/`**: Raw CSV/Excel files for car specs and track geometry.
 - **`src/`**: Core simulation engine and physics models.
-- **`models/`**: dbt models for data transformation.
 - **`output/`**: Generated simulation results and visualisation HTML files.
 - **`tests/`**: Unit tests for physics functions and data validation.
-
-## Validation Targets
-
-- **Viper ACR-E:** Target lap time ~1:28.65 (Modelled: ~1:30.65)
 

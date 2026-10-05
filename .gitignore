@@ -2,3 +2,4 @@
 .pixi/*
 !.pixi/config.toml
 self_docs
+src/__pycache__
