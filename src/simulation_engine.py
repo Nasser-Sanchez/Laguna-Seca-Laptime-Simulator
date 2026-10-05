@@ -21,7 +21,6 @@ class SimulationEngine:
 
         multiplier = self.driver.get_multiplier()[0]
         self.car.downforce_curve['scaled_downforce'] = self.car.downforce_curve['downforce']*multiplier
-
         def _cornering_radius(m, g, mu, v, downforce):
             return (
                 ((v**2) * m) / 
@@ -77,6 +76,8 @@ class SimulationEngine:
         return row
 
 
+
+
     def simulate_lap(self, flying_start: str = "y"):
 
         self.track['cornering_speed'] = 0.0
@@ -103,6 +104,83 @@ class SimulationEngine:
         track['initial_velocity'] = track['initial_velocity'] * 2.237
         track['final_velocity'] = track['final_velocity'] * 2.237
         return track
+
+
+
+
+
+
+
+
+    def run_simulation(self, car_name: str, skill_level, n_laps: int = 1, flying_start: bool = True, save: bool = False) -> dict:
+        df = pd.read_csv("data/cars.csv")
+        
+
+        df['full_name'] = (df['year'].astype(str) + ' ' + df['make'] + ' ' + df['model'] + ' ' + df['trim'].fillna('')).str.strip()
+        
+        match = df[df['full_name'].str.lower() == car_name.lower()]
+        
+        if match.empty:
+            raise ValueError(f"Car '{car_name}' not found. Available names:\n{df['full_name'].tolist()}")
+            
+        car_row = match.iloc[0]
+
+        car = CarModel(car_row)
+        driver = DriverProfile(skill_level)
+        self.car = car
+        self.driver = driver
+
+        lap_times = []
+        all_sectors = []
+
+        for _ in range(n_laps):
+            track_results = self.simulate_lap(flying_start=flying_start)
+            timed = track_results[track_results['timed'] == True]
+            
+            lap_time = timed['time'].sum()
+            lap_times.append(lap_time)
+            
+            sectors = timed[['num', 'time']].set_index('num')['time'].to_dict()
+            all_sectors.append(sectors)
+
+        mean_lap = np.mean(lap_times)
+        std_lap = np.std(lap_times)
+        p2_5 = np.percentile(lap_times, 2.5)
+        p97_5 = np.percentile(lap_times, 97.5)
+        interval = (p2_5, p97_5)
+
+        results = {
+            "mean_lap_time": mean_lap,
+            "std_lap_time": std_lap,
+            "95_percent_interval": interval,
+            "lap_times": lap_times,
+            "sectors": all_sectors,
+            "is_flying_start": flying_start
+        }
+
+        if save:
+            self.save_results(results, car_name, skill_level)
+
+        return results
+
+    def save_results(self, results: dict, car_name: str, skill_level):
+        """Saves results to CSV automatically."""
+        Path("results").mkdir(exist_ok=True)
+        filename_base = f"{car_name.replace(' ', '_')}_{skill_level.value}"
+        
+        summary_df = pd.DataFrame([{
+            "mean_lap_time": results['mean_lap_time'],
+            "std_lap_time": results['std_lap_time'],
+            "p2.5": results['95_percent_interval'][0],
+            "p97.5": results['95_percent_interval'][1],
+            "n_laps": len(results['lap_times'])
+        }])
+        summary_df.to_csv(f"results/{filename_base}_summary.csv", index=False)
+        
+        lap_times_df = pd.DataFrame(results['lap_times'], columns=['lap_time'])
+        lap_times_df.to_csv(f"results/{filename_base}_laps.csv", index=False)
+        
+        print(f"Saved results to results/{filename_base}_summary.csv and results/{filename_base}_laps.csv")
 
         
 
