@@ -32,6 +32,8 @@ class CarModel:
                     points.append((self.specs['accel_0_100'], self._mph_to_mps(100)))
         if pd.notna(self.specs['qmile_time']) and pd.notna(self.specs['qmile_speed']):
                     points.append((self.specs['qmile_time'], self._mph_to_mps(self.specs['qmile_speed'])))
+        if pd.notna(self.specs['accel_0_124']):
+                    points.append((self.specs['accel_0_124'], self._mph_to_mps(124)))
         if pd.notna(self.specs['accel_0_186']):
                     points.append((self.specs['accel_0_186'], self._mph_to_mps(186)))
 
@@ -68,7 +70,6 @@ class CarModel:
               self.t_data,
               self.v_data,
               p0=[1],
-              bounds=(0, np.inf)
         )
         y_pred = exp_curve(self.t_data,popt[0])
         rss = np.sum((self.v_data-y_pred)**2)
@@ -77,17 +78,19 @@ class CarModel:
         
     def compute_acceleration_curve(self):
 
-        popt, rss = self._fit_log()
-        a,b = popt
+        popt, rss = self._fit_exp()
+        #a,b = popt
+        k = popt
 
         # time range for v / t curve 
         max_t = 180
-        t_dense = np.linspace(0, max_t, 18000)
+        t_dense = np.linspace(0, max_t, 1800)
 
-        v_dense = a * np.log(b * t_dense + 1)
+        #v_dense = a * np.log(b * t_dense + 1)
+        
 
         v_max = self._mph_to_mps(self.specs['top_speed'])
-
+        v_dense = v_max * (1 - np.exp(-k * t_dense))
         idx = np.searchsorted(v_dense, v_max)
 
         t_final = t_dense[:idx+1]
