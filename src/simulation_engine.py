@@ -20,44 +20,47 @@ class SimulationEngine:
     def _calculate_corner(self,row):
 
         multiplier = self.driver.get_multiplier()[0]
-        self.car.downforce_curve['scaled_downforce'] = self.car.downforce_curve['downforce']*multiplier
+        df = self.car.downforce_curve.copy()
+        df['scaled_downforce'] = df['downforce']*multiplier
         def _cornering_radius(m, g, mu, v, downforce):
             return (
                 ((v**2) * m) / 
                 (mu * ((g * m) + downforce))
             )            
-        self.car.downforce_curve['req_radius'] = _cornering_radius(
+        df['req_radius'] = _cornering_radius(
             self.car.specs['mass'], self.g, self.mu, 
-            self.car.downforce_curve['velocity'],
-            self.car.downforce_curve['scaled_downforce']
+            df['velocity'],
+            df['scaled_downforce']
         )
 
 
 
         cornering_speed = np.interp(
             row['radius'],
-            self.car.downforce_curve['req_radius'],
-            self.car.downforce_curve['velocity']
+            df['req_radius'],
+            df['velocity']
         )
 
-
-        row['cornering_speed'] = cornering_speed
-        row['final_velocity'] = cornering_speed
-        row['time'] = row['arc_length']/row['cornering_speed']
+        result = row.copy()
+        result['cornering_speed'] = cornering_speed
+        result['final_velocity'] = cornering_speed
+        result['time'] = result['arc_length']/result['cornering_speed']
         
         return row
 
     def _calculate_straight(self, row):
-        
+
+        print(row['initial_velocity'])
         multiplier = self.driver.get_multiplier()[1]
-        self.car.acceleration_curve['scaled_time'] = self.car.acceleration_curve['time'] * multiplier
+        df = self.car.acceleration_curve.copy()
+        df['scaled_time'] = df['time'] * multiplier
 
     #    entry_time = np.interp(
     #        initial_velocity,
-    #        self.car.acceleration_curve['velocity'],
-    #        self.car.acceleration_curve['scaled_time']
+    #        df['velocity'],
+    #        df['scaled_time']
     #    )
-        entry_curve = self.car.acceleration_curve[self.car.acceleration_curve['velocity']>=row['initial_velocity']].copy()
+        entry_curve = df[df['velocity']>=row['initial_velocity']].copy()
         start_time = entry_curve['scaled_time'].min()
         entry_curve['lag_velocity'] = entry_curve['velocity'].shift(1)
         entry_curve['lag_time'] = entry_curve['scaled_time'].shift(1)
@@ -78,14 +81,14 @@ class SimulationEngine:
 
 
 
-    def simulate_lap(self, flying_start: str = "y"):
+    def simulate_lap(self, flying_start: bool = True):
 
         self.track['cornering_speed'] = 0.0
         self.track['time'] = 0.0
         self.track['initial_velocity'] = 0.0
         self.track['final_velocity'] = 0.0
         track = self.track.copy()
-        if flying_start=="n":
+        if not flying_start:
             track = track[track['timed']==True].copy()
 
         
