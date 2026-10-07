@@ -20,47 +20,44 @@ class SimulationEngine:
     def _calculate_corner(self,row):
 
         multiplier = self.driver.get_multiplier()[0]
-        df = self.car.downforce_curve.copy()
-        df['scaled_downforce'] = df['downforce']*multiplier
+        self.car.downforce_curve['scaled_downforce'] = self.car.downforce_curve['downforce']*multiplier
         def _cornering_radius(m, g, mu, v, downforce):
             return (
                 ((v**2) * m) / 
                 (mu * ((g * m) + downforce))
             )            
-        df['req_radius'] = _cornering_radius(
+        self.car.downforce_curve['req_radius'] = _cornering_radius(
             self.car.specs['mass'], self.g, self.mu, 
-            df['velocity'],
-            df['scaled_downforce']
+            self.car.downforce_curve['velocity'],
+            self.car.downforce_curve['scaled_downforce']
         )
 
 
 
         cornering_speed = np.interp(
             row['radius'],
-            df['req_radius'],
-            df['velocity']
+            self.car.downforce_curve['req_radius'],
+            self.car.downforce_curve['velocity']
         )
 
-        result = row.copy()
-        result['cornering_speed'] = cornering_speed
-        result['final_velocity'] = cornering_speed
-        result['time'] = result['arc_length']/result['cornering_speed']
+
+        row['cornering_speed'] = cornering_speed
+        row['final_velocity'] = cornering_speed
+        row['time'] = row['arc_length']/row['cornering_speed']
         
         return row
 
     def _calculate_straight(self, row):
-
         print(row['initial_velocity'])
         multiplier = self.driver.get_multiplier()[1]
-        df = self.car.acceleration_curve.copy()
-        df['scaled_time'] = df['time'] * multiplier
+        self.car.acceleration_curve['scaled_time'] = self.car.acceleration_curve['time'] * multiplier
 
     #    entry_time = np.interp(
     #        initial_velocity,
-    #        df['velocity'],
-    #        df['scaled_time']
+    #        self.car.acceleration_curve['velocity'],
+    #        self.car.acceleration_curve['scaled_time']
     #    )
-        entry_curve = df[df['velocity']>=row['initial_velocity']].copy()
+        entry_curve = self.car.acceleration_curve[self.car.acceleration_curve['velocity']>=row['initial_velocity']].copy()
         start_time = entry_curve['scaled_time'].min()
         entry_curve['lag_velocity'] = entry_curve['velocity'].shift(1)
         entry_curve['lag_time'] = entry_curve['scaled_time'].shift(1)
@@ -81,7 +78,7 @@ class SimulationEngine:
 
 
 
-    def simulate_lap(self, flying_start: bool = True):
+    def simulate_lap(self, flying_start: bool=True):
 
         self.track['cornering_speed'] = 0.0
         self.track['time'] = 0.0
@@ -104,8 +101,8 @@ class SimulationEngine:
             #     next_idx = track.index[current_pos + 1]
             #     track.loc[next_idx,'initial_velocity'] = row['final_velocity']
             track.loc[i] = row
-        track['initial_velocity'] = track['initial_velocity'] * 2.237
-        track['final_velocity'] = track['final_velocity'] * 2.237
+        # track['initial_velocity'] = track['initial_velocity'] * 2.237
+        # track['final_velocity'] = track['final_velocity'] * 2.237
         return track
 
 
@@ -135,6 +132,7 @@ class SimulationEngine:
 
         lap_times = []
         all_sectors = []
+        all_track_data = []  # NEW: store full per-segment data
 
         for _ in range(n_laps):
             track_results = self.simulate_lap(flying_start=flying_start)
@@ -145,6 +143,8 @@ class SimulationEngine:
             
             sectors = timed[['num', 'time']].set_index('num')['time'].to_dict()
             all_sectors.append(sectors)
+            
+            all_track_data.append(timed.copy())
 
         mean_lap = np.mean(lap_times)
         std_lap = np.std(lap_times)
@@ -158,7 +158,8 @@ class SimulationEngine:
             "95_percent_interval": interval,
             "lap_times": lap_times,
             "sectors": all_sectors,
-            "is_flying_start": flying_start
+            "is_flying_start": flying_start,
+            "track_data": all_track_data,  # NEW
         }
 
         if save:
@@ -183,22 +184,24 @@ class SimulationEngine:
         lap_times_df = pd.DataFrame(results['lap_times'], columns=['lap_time'])
         lap_times_df.to_csv(f"results/{filename_base}_laps.csv", index=False)
         
-        print(f"Saved results to results/{filename_base}_summary.csv and results/{filename_base}_laps.csv")
-
+        for lap_idx, track_df in enumerate(results['track_data']):
+            lap_filename = f"results/{filename_base}_lap{lap_idx+1}_track.csv"
+            track_df.to_csv(lap_filename, index=False)
         
-
-
-       
-              
-
-
+        all_sectors = results['sectors']
+        if all_sectors:
+            all_keys = set()
+            for s in all_sectors:
+                all_keys.update(s.keys())
+            sector_avgs = {}
+            for key in sorted(all_keys, key=lambda x: (int(x) if x.replace('_','').isdigit() else float('inf'))):
+                vals = [sectors[key] for sectors in all_sectors if key in sectors]
+                sector_avgs[f'sector_{key}_avg'] = np.mean(vals)
+            sector_df = pd.DataFrame([sector_avgs])
+            sector_df.to_csv(f"results/{filename_base}_sector_avgs.csv", index=False)
         
-
-    
-
-
-       
-        
-
-
-
+        print(f"Saved results to results/{filename_base}_summary.csv, results/{filename_base}_laps.csv")
+        if results['track_data']:
+            print(f"  + {len(results['track_data'])} track CSV(s) with full per-segment data")
+        if any(results['sectors']):
+            print(f"  + sector averages: results/{filename_base}_sector_avgs.csv")
