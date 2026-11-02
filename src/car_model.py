@@ -14,6 +14,7 @@ class CarModel:
         self.curve_params = {}
         self.downforce_curve = self.compute_downforce_curve()
         self.acceleration_curve = self.compute_acceleration_curve()
+        self.braking_curve = self.compute_braking_curve()
 
     @staticmethod
     def _mph_to_mps(v_mph: float):
@@ -45,6 +46,7 @@ class CarModel:
         v_data = np.array([p[1] for p in points])
 
         return t_data, v_data
+    
 
     def _fit_log(self):
         def _log_curve(t,a,b):
@@ -74,6 +76,21 @@ class CarModel:
         y_pred = exp_curve(self.t_data,popt[0])
         rss = np.sum((self.v_data-y_pred)**2)
         return popt[0], rss
+
+    def _fit_quadratic(self):
+        velocity = self._mph_to_mps(self.specs['brake_speed'])
+        braking_distance = self.specs['brake_dist']
+        def quadratic_curve(x,a):
+            return a*x**2
+
+        popt,pcov = curve_fit(
+            quadratic_curve,
+            velocity,
+            braking_distance,
+            p0=0.03      
+        )
+        return popt[0]
+          
 
         
     def compute_acceleration_curve(self):
@@ -115,5 +132,16 @@ class CarModel:
                              )
         F_d = d_f * (v_grid / d_v)**2
         return pd.DataFrame({'velocity':v_grid, 'downforce':F_d})
-        
 
+    def compute_braking_curve(self):
+
+        popt = self._fit_quadratic()
+
+        v_grid = np.linspace(0,
+                               self._mph_to_mps(self.specs['top_speed']),
+                               2000
+                               )
+        braking_distance = popt * (v_grid^2)
+
+        return pd.DataFrame({'velocity':v_grid, 'braking_distance': braking_distance})
+          
