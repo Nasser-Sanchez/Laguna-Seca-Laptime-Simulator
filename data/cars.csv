@@ -1,5 +1,5 @@
 year,make,model,trim,horsepower,torque,top_speed,accel_0_60,accel_0_100,accel_0_124,accel_0_186,qmile_time,qmile_speed,brake_speed,brake_dist,mass,downforce_kg,downforce_speed,layout
-2016,Dodge,Viper,ACR-E,645,600,177,3.3,7.4,,,11.3,127.3,60,27,1538,771,177,fr
+2016,Dodge,Viper,ACR-E,645,600,177,3.3,7.4,,,11.2,128,60,27,1538,771,177,fr
 2010,Bugatti,Veyron,Supersport,1183,1106,268,2.5,4.9,6.7,14.6,9.9,146,62,37,1990,400,250,ma
 2017,Lamborghini,Huracan,Performante,631,443,204,2.9,,8.9,,10.4,134,62,30,1550,138,124,ma
 2023,Honda,Civic,Type R,325,318,171,4.9,,17.3,,13.7,109,62,31,1420,100,124,ff
