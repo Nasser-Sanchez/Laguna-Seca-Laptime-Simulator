@@ -16,27 +16,33 @@ def viper_row():
     return pd.Series({
         'year': 2016, 'make': 'Dodge', 'model': 'Viper', 'trim': 'ACR-E',
         'top_speed': 177,
-        'accel_0_60': 3.3, 'accel_0_100': 7.4,
+        'accel_0_60': 3.3, 'accel_0_100': 7.4, 'accel_0_124': None,
         'qmile_time': 11.3, 'qmile_speed': 127.3,
         'accel_0_186': None,
         'mass': 1538,
         'downforce_kg': 771, 'downforce_speed': 177,
         'horsepower': 645, 'torque': 600, 'layout': 'fr',
+        # Added braking specs
+        'brake_dist': 37,  # meters (approx for Viper ACR)
+        'brake_speed': 62.0, # mph
     })
-
 
 @pytest.fixture
 def veyron_row():
     return pd.Series({
         'year': 2010, 'make': 'Bugatti', 'model': 'Veyron', 'trim': 'Supersport',
         'top_speed': 267,
-        'accel_0_60': 2.4, 'accel_0_100': 4.9,
+        'accel_0_60': 2.4, 'accel_0_100': 4.9, 'accel_0_124':6.7,
         'qmile_time': 9.9, 'qmile_speed': 146,
         'accel_0_186': 14.6,
         'mass': 1990,
         'downforce_kg': 400, 'downforce_speed': 250,
         'horsepower': 1183, 'torque': 1106, 'layout': 'ma',
+        # Added braking specs
+        'brake_dist': 27.0, # meters (approx for Veyron)
+        'brake_speed': 60.0, # mph (often tested at higher speeds for hypercars)
     })
+
 
 
 @pytest.fixture
@@ -46,7 +52,7 @@ def minimal_row():
         'year': 2020, 'make': 'Test', 'model': 'Car', 'trim': 'Base',
         'top_speed': 120,
         'accel_0_60': 5.0,
-        'accel_0_100': None, 'qmile_time': None, 'qmile_speed': None,
+        'accel_0_100': None, 'accel_0_124':None, 'qmile_time': None, 'qmile_speed': None,
         'accel_0_186': None,
         'mass': 1000,
         'downforce_kg': 100, 'downforce_speed': 100,
@@ -159,6 +165,43 @@ class TestDownforceCurve:
         expected = 771 * 9.81
         closest = car.downforce_curve.iloc[car.downforce_curve['velocity'].sub(v_at_speed).abs().idxmin()]
         assert closest['downforce'] == pytest.approx(expected, rel=0.05)
+
+# --- Deceleration Curve ---
+
+
+class TestBrakingCurve:
+    def test_braking_distance_integration(self, viper_row):
+        """Validate that integrating the velocity curve matches the expected distance."""
+        car = CarModel(viper_row)
+        times, velocities = car.compute_braking_curve()
+        
+        # Integrate v(t) to get distance
+        dist = np.trapz(velocities, times)
+        
+        # Calculate expected distance from top speed using the braking specs
+        v_top = car._mph_to_mps(car.specs['top_speed'])
+        v_brake = car._mph_to_mps(car.specs['brake_speed'])
+        brake_dist = car.specs['brake_dist']
+        
+        # Physics: d = v^2 / (2*a). Since a is constant:
+        # d_top / d_brake = (v_top^2) / (v_brake^2)
+        expected_dist = (v_top**2) * brake_dist / (v_brake**2)
+        
+        assert dist == pytest.approx(expected_dist, rel=1e-2)
+
+    def test_braking_distance_at_60mph(self, viper_row):
+        """Validate that the distance from 60mph to 0 matches the spec."""
+        car = CarModel(viper_row)
+        times, velocities = car.compute_braking_curve()
+        
+        # Find the point where velocity drops below 60 mph
+        v_60_mps = 60 * 0.44704
+        idx = np.argmax(velocities < v_60_mps)
+        
+        # Integrate from that point to the end
+        dist_60 = np.trapz(velocities[idx:], times[idx:])
+        
+        assert dist_60 == pytest.approx(car.specs['brake_dist'], rel=1e-2)
 
 
 # --- Static helper ---

@@ -8,12 +8,6 @@ This project began as a **manual analysis** comparing specific vehicle performan
 
 It will evolve into a **scalable, automated engineering project**:
 
-## Features
-
-- **Physics-Based Modelling:** Simulates acceleration curves, dynamic downforce, and cornering speeds.
-- **Monte Carlo Analysis:** Generates lap time percentiles and confidence intervals.
-- **Scalable Architecture:** Designed to handle 10,000+ simulations per car using distributed computing.
-- **Generalisation:** Supports adding new cars and tracks via LLM agent or web scraping.
 
 
 

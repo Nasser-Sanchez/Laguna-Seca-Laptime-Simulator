@@ -14,10 +14,12 @@ class CarModel:
         self.curve_params = {}
         self.downforce_curve = self.compute_downforce_curve()
         self.acceleration_curve = self.compute_acceleration_curve()
+        self.braking_curve = self.compute_braking_curve()
 
     @staticmethod
     def _mph_to_mps(v_mph: float):
         return v_mph * 0.44704
+
 
  
 
@@ -45,6 +47,7 @@ class CarModel:
         v_data = np.array([p[1] for p in points])
 
         return t_data, v_data
+    
 
     def _fit_log(self):
         def _log_curve(t,a,b):
@@ -75,26 +78,57 @@ class CarModel:
         rss = np.sum((self.v_data-y_pred)**2)
         return popt[0], rss
 
+    def _fit_quadratic(self):
+        velocity = self._mph_to_mps(self.specs['brake_speed'])
+        braking_distance = self.specs['brake_dist']
+        def quadratic_curve(x,a):
+            return a*x**2
+
+        popt,pcov = curve_fit(
+            quadratic_curve,
+            velocity,
+            braking_distance,
+            p0=[0.03]      
+        )
+        return popt[0]
+          
+
         
     def compute_acceleration_curve(self):
+        model = "exp"
+        if model == "exp":
+            popt, rss = self._fit_exp()
+            #a,b = popt
+            k = popt
 
-        popt, rss = self._fit_exp()
-        #a,b = popt
-        k = popt
+            # time range for v / t curve 
+            max_t = 180
+            t_dense = np.linspace(0, max_t, 1800)
 
-        # time range for v / t curve 
-        max_t = 180
-        t_dense = np.linspace(0, max_t, 1800)
+            #v_dense = a * np.log(b * t_dense + 1)
+            
 
-        #v_dense = a * np.log(b * t_dense + 1)
-        
+            v_max = self._mph_to_mps(self.specs['top_speed'])
+            v_dense = v_max * (1 - np.exp(-k * t_dense))
+            idx = np.searchsorted(v_dense, v_max)
 
-        v_max = self._mph_to_mps(self.specs['top_speed'])
-        v_dense = v_max * (1 - np.exp(-k * t_dense))
-        idx = np.searchsorted(v_dense, v_max)
+            t_final = t_dense[:idx+1]
+            v_final = v_dense[:idx+1]
+        elif model == "log":
+            popt, rss = self._fit_log()
+            a, b = popt
+            
+            # time range for v / t curve 
+            max_t = 180
+            t_dense = np.linspace(0, max_t, 1800)
+            
+            v_dense = a * np.log(b * t_dense + 1)
+            
+            v_max = self._mph_to_mps(self.specs['top_speed'])
+            idx = np.searchsorted(v_dense, v_max)
 
-        t_final = t_dense[:idx+1]
-        v_final = v_dense[:idx+1]
+            t_final = t_dense[:idx+1]
+            v_final = v_dense[:idx+1]
 
         return pd.DataFrame({'time': t_final, 'velocity': v_final})
 
@@ -115,5 +149,22 @@ class CarModel:
                              )
         F_d = d_f * (v_grid / d_v)**2
         return pd.DataFrame({'velocity':v_grid, 'downforce':F_d})
+
+    def compute_braking_curve(self):
+
+        a_coeff = self.specs['brake_dist'] / self._mph_to_mps(self.specs['brake_speed'])**2
+        deceleration = 1 / (2 * a_coeff)
+
+        t_stop = self._mph_to_mps(self.specs['top_speed']) / deceleration
+
+        t_grid = np.linspace(0, t_stop, 2000)
+        velocities = self._mph_to_mps(self.specs['top_speed']) - deceleration * t_grid
         
 
+
+
+        
+
+
+        return pd.DataFrame({'velocity':velocities, 'time': t_grid})
+          
